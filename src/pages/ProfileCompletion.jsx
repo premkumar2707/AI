@@ -66,13 +66,10 @@ const ProfileCompletion = () => {
     if (otp === expectedOtp) {
       setTwilioError(null);
       setKycStep(3); // Loading
-      // Simulate API delay for verifying documents
+      // Simulate document verification delay
       setTimeout(() => {
-        setFormData({
-          ...formData,
-          name: "Aadhaar Verified Citizen", // Simulated verified name
-          age: 65 // Simulated fetching age (will trigger Senior Citizen)
-        });
+        // Don't overwrite user's name/age - just mark as verified
+        // In a real app, Aadhaar data would be fetched here
         setKycStep(4); // Verified
       }, 2000);
     } else {
