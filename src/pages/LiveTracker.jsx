@@ -1,21 +1,78 @@
 import React, { useState, useEffect, memo } from 'react';
 import { motion } from 'framer-motion';
 import { QRCodeSVG } from 'qrcode.react';
-import { Clock, Bell, BellOff, MessageSquare, Mic, Sparkles, ChevronLeft } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Clock, Bell, BellOff, MessageSquare, Mic, Sparkles, ChevronLeft, MapPin } from 'lucide-react';
+import { Link, useNavigate } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 
 const LiveTracker = () => {
-  const [position, setPosition] = useState(12);
-  const [total, setTotal] = useState(45);
+  const { user, tokens } = useAuth();
+  const navigate = useNavigate();
   const [notifications, setNotifications] = useState(true);
+
+  // Find active token
+  const activeToken = tokens?.find(t => t.status === 'waiting');
+  
+  // If no active token, simulate position or show nothing
+  const [position, setPosition] = useState(activeToken?.estimatedWait ? Math.ceil(activeToken.estimatedWait / 4) : 12);
+  const total = 45;
 
   // Simulation of queue movement
   useEffect(() => {
+    if (!activeToken) return;
     const interval = setInterval(() => {
       setPosition(prev => (prev > 1 ? prev - 1 : 1));
     }, 15000); // Every 15 seconds for demo
     return () => clearInterval(interval);
-  }, []);
+  }, [activeToken]);
+
+  if (!user) {
+    return (
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center p-6 text-center">
+        <div>
+          <h2 className="text-2xl font-black text-slate-900 mb-2">Please Sign In</h2>
+          <p className="text-slate-500 mb-6">You need to be logged in to view your live tokens.</p>
+          <button onClick={() => navigate('/')} className="m3-button m3-button-gold px-8 py-3">Go to Home</button>
+        </div>
+      </div>
+    );
+  }
+
+  if (!activeToken) {
+    return (
+      <div className="min-h-screen bg-slate-50 p-6 md:p-12 font-outfit">
+        <div className="max-w-2xl mx-auto text-center space-y-6 pt-20">
+           <div className="w-24 h-24 bg-slate-100 rounded-full flex items-center justify-center mx-auto text-slate-400">
+             <MapPin size={40} />
+           </div>
+           <h2 className="text-3xl font-black text-slate-900">No Active Tokens</h2>
+           <p className="text-slate-500">You don't have any waiting tokens right now.</p>
+           <button onClick={() => navigate('/dashboard')} className="m3-button m3-button-gold px-8 py-4 shadow-gold">
+             Book a New Token
+           </button>
+
+           {tokens?.length > 0 && (
+             <div className="mt-16 text-left">
+               <h3 className="font-black text-lg text-slate-900 mb-4">Past Tokens</h3>
+               <div className="space-y-4">
+                 {tokens.filter(t => t.status !== 'waiting').map(t => (
+                   <div key={t.tokenId} className="glass-white p-6 rounded-[24px] border border-slate-200 shadow-sm flex justify-between items-center">
+                     <div>
+                       <h4 className="font-black text-slate-800">{t.serviceType}</h4>
+                       <p className="text-xs text-slate-500">{new Date(t.createdAt).toLocaleDateString()}</p>
+                     </div>
+                     <span className="text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded-full bg-slate-100 text-slate-500">
+                       {t.status}
+                     </span>
+                   </div>
+                 ))}
+               </div>
+             </div>
+           )}
+        </div>
+      </div>
+    );
+  }
 
   const progress = ((total - position) / total) * 100;
   const radius = 90;
@@ -26,12 +83,12 @@ const LiveTracker = () => {
     <div className="min-h-screen bg-white text-slate-800 p-6 md:p-12 font-outfit overflow-y-auto">
       {/* Header */}
       <div className="flex items-center justify-between mb-8 max-w-2xl mx-auto">
-        <Link to="/find-centers" className="p-3 bg-slate-50 hover:bg-slate-100 rounded-full transition-colors border border-slate-100 shadow-sm">
+        <Link to="/dashboard" className="p-3 bg-slate-50 hover:bg-slate-100 rounded-full transition-colors border border-slate-100 shadow-sm">
           <ChevronLeft size={24} className="text-slate-600" />
         </Link>
         <div className="text-center">
           <h1 className="text-2xl font-black text-slate-900 tracking-tighter">Live Status</h1>
-          <p className="text-[10px] text-slate-400 uppercase font-black tracking-widest">Token: BLR-HOSP-2024-0042</p>
+          <p className="text-[10px] text-slate-400 uppercase font-black tracking-widest">Token: {activeToken.tokenId}</p>
         </div>
         <button 
           onClick={() => setNotifications(!notifications)}
@@ -42,6 +99,12 @@ const LiveTracker = () => {
       </div>
 
       <div className="max-w-2xl mx-auto space-y-10">
+        {activeToken.priorityType === 'emergency' && (
+          <div className="bg-rose-100 border border-rose-200 text-rose-800 p-4 rounded-2xl flex items-center justify-center gap-3 font-black shadow-sm animate-pulse">
+            <Sparkles size={20} /> Emergency Priority Active
+          </div>
+        )}
+
         {/* Progress Ring Section */}
         <div className="relative flex flex-col items-center glass-white p-10 rounded-[40px] border border-slate-100 shadow-xl">
           <div className="relative w-64 h-64">
@@ -63,7 +126,7 @@ const LiveTracker = () => {
                 stroke="currentColor"
                 strokeWidth="16"
                 fill="transparent"
-                className="text-primary drop-shadow-md"
+                className={activeToken.priorityType === 'emergency' ? 'text-rose-500' : 'text-primary'}
                 strokeDasharray={circumference}
                 initial={{ strokeDashoffset: circumference }}
                 animate={{ strokeDashoffset }}
@@ -100,7 +163,7 @@ const LiveTracker = () => {
         <div className="grid grid-cols-2 gap-6">
           <div className="glass-white p-8 rounded-[32px] border border-slate-100 text-center shadow-lg hover:border-primary/20 transition-colors">
             <p className="text-[10px] text-slate-400 uppercase font-black tracking-widest mb-2">Serving Now</p>
-            <p className="text-5xl font-black text-slate-900">#41</p>
+            <p className="text-5xl font-black text-slate-900">#{Math.max(1, 45 - position)}</p>
             <div className="mt-4 inline-block px-3 py-1 bg-secondary/10 rounded-lg text-[10px] text-secondary font-black uppercase tracking-widest">
               Counter 03
             </div>
@@ -108,7 +171,7 @@ const LiveTracker = () => {
           <div className="glass-white p-8 rounded-[32px] border border-slate-100 flex flex-col items-center justify-center shadow-lg hover:border-primary/20 transition-colors">
             <div className="p-2 bg-white rounded-2xl shadow-sm border border-slate-100">
               <QRCodeSVG 
-                value="BLR-HOSP-2024-0042" 
+                value={activeToken.tokenId} 
                 size={80} 
                 fgColor="#0f172a" 
                 bgColor="#ffffff" 
@@ -116,33 +179,6 @@ const LiveTracker = () => {
             </div>
             <p className="text-[10px] text-slate-400 mt-4 uppercase tracking-widest font-black">Scan at Counter</p>
           </div>
-        </div>
-
-        {/* Smart Planner Teaser */}
-        <div className="bg-gradient-to-br from-secondary/10 to-transparent p-8 rounded-[32px] border border-secondary/20 shadow-lg">
-           <h3 className="text-xl font-black mb-6 flex items-center gap-2 text-slate-900">
-             <Sparkles size={24} className="text-secondary" /> Smart Visit Planner
-           </h3>
-           <div className="space-y-4">
-             <div className="flex justify-between items-center text-sm font-medium">
-               <span className="text-slate-500">Expected Crowd Level</span>
-               <span className="text-amber-500 font-black px-3 py-1 bg-amber-50 rounded-lg">Moderate</span>
-             </div>
-             <div className="flex justify-between items-center text-sm font-medium">
-               <span className="text-slate-500">Best Time to Visit</span>
-               <span className="text-green-500 font-black px-3 py-1 bg-green-50 rounded-lg">After 2:30 PM</span>
-             </div>
-             <div className="pt-6 mt-6 border-t border-secondary/10">
-               <p className="text-[10px] uppercase font-black tracking-widest text-slate-400 mb-3">Required Documents:</p>
-               <div className="flex flex-wrap gap-2">
-                 {['Original Aadhaar', 'Address Proof', '2 Photos'].map(doc => (
-                   <span key={doc} className="text-[10px] font-black uppercase tracking-widest px-3 py-1.5 bg-white text-slate-600 rounded-lg border border-slate-200 shadow-sm">
-                     {doc}
-                   </span>
-                 ))}
-               </div>
-             </div>
-           </div>
         </div>
       </div>
     </div>

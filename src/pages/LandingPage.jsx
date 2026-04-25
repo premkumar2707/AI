@@ -1,9 +1,15 @@
-import React, { memo } from 'react';
-import { ShieldCheck, MapPin, Ticket, Clock, LogIn, Users, Smartphone, Sparkles, Star } from 'lucide-react';
+import React, { memo, useState } from 'react';
+import { ShieldCheck, MapPin, Ticket, Clock, LogIn, Users, Smartphone, Sparkles, Star, ArrowRight } from 'lucide-react';
 import { motion } from 'framer-motion';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
+import AuthModal from '../components/AuthModal';
+import { useAuth } from '../context/AuthContext';
 
 const LandingPage = () => {
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+  const { user } = useAuth();
+  const navigate = useNavigate();
+
   return (
     <div className="relative min-h-screen w-full overflow-hidden flex flex-col font-outfit bg-white">
       {/* Optimized Background Layer */}
@@ -41,6 +47,7 @@ const LandingPage = () => {
           </span>
         </Link>
         <div className="hidden md:flex gap-8 text-xs font-black text-slate-500 uppercase tracking-widest">
+          {user && <Link to="/dashboard" className="hover:text-primary transition-colors">Dashboard</Link>}
           <Link to="/find-centers" className="hover:text-primary transition-colors">Find Centers</Link>
           <Link to="/smart-planner" className="hover:text-primary transition-colors">Smart Planner</Link>
           <Link to="/staff" className="m3-button m3-button-gold py-2 px-6">Admin</Link>
@@ -72,9 +79,22 @@ const LandingPage = () => {
               </div>
 
               <div className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-4">
-                <button className="w-full sm:w-auto m3-button m3-button-gold px-10 py-5 text-lg shadow-gold">
-                  <LogIn size={20} /> Sign in
-                </button>
+                {user ? (
+                  <button 
+                    onClick={() => navigate('/dashboard')}
+                    className="w-full sm:w-auto m3-button m3-button-gold px-10 py-5 text-lg shadow-gold"
+                  >
+                    Go to Dashboard <ArrowRight size={20} className="ml-2" />
+                  </button>
+                ) : (
+                  <button 
+                    onClick={() => setIsAuthModalOpen(true)}
+                    className="w-full sm:w-auto m3-button m3-button-gold px-10 py-5 text-lg shadow-gold"
+                  >
+                    <LogIn size={20} /> Sign in
+                  </button>
+                )}
+                
                 <Link to="/kiosk" className="w-full sm:w-auto m3-button m3-button-sky px-10 py-5 text-lg shadow-blue">
                   <Smartphone size={20} /> Kiosk Mode
                 </Link>
@@ -102,6 +122,9 @@ const LandingPage = () => {
       <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-30 flex items-center gap-4 text-slate-300 font-black uppercase tracking-widest text-[9px]">
         <span>Designed in Bangalore 🇮🇳</span>
       </div>
+
+      {/* Auth Modal UI */}
+      <AuthModal isOpen={isAuthModalOpen} onClose={() => setIsAuthModalOpen(false)} />
     </div>
   );
 };
