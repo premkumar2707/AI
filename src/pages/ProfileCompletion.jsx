@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { ShieldCheck, User, Phone, Calendar, ArrowRight, Loader2, FileCheck } from 'lucide-react';
-import { motion } from 'framer-motion';
+import { ShieldCheck, User, Phone, Calendar, ArrowRight, Loader2, FileCheck, CheckCircle2 } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 
 const ProfileCompletion = () => {
   const { user, updateProfile } = useAuth();
@@ -12,26 +12,42 @@ const ProfileCompletion = () => {
     phone: user?.phone || '',
     age: user?.age || ''
   });
-  const [digiLockerLoading, setDigiLockerLoading] = useState(false);
-  const [digiLockerLinked, setDigiLockerLinked] = useState(false);
+  
+  // KYC Flow State
+  // 0: idle, 1: enter aadhaar, 2: enter otp, 3: loading, 4: verified
+  const [kycStep, setKycStep] = useState(0);
+  const [aadhaar, setAadhaar] = useState('');
+  const [otp, setOtp] = useState('');
+  const [showOtpToast, setShowOtpToast] = useState(false);
 
   // If user is not present or already setup, handle appropriately (for safety)
   if (!user) {
     return <div className="min-h-screen bg-slate-50 flex items-center justify-center p-6"><p>Please sign up first.</p></div>;
   }
 
-  const simulateDigiLocker = () => {
-    setDigiLockerLoading(true);
-    // Simulate API delay
-    setTimeout(() => {
-      setFormData({
-        ...formData,
-        name: formData.name || "Aadhaar Verified Name", // Only overwrite if empty or keep it
-        age: 62 // Simulate fetching age
-      });
-      setDigiLockerLinked(true);
-      setDigiLockerLoading(false);
-    }, 2000);
+  const handleSendOtp = (e) => {
+    e.preventDefault();
+    if (aadhaar.length === 12) {
+      setKycStep(2);
+      setShowOtpToast(true);
+      setTimeout(() => setShowOtpToast(false), 8000); // Hide after 8 seconds
+    }
+  };
+
+  const handleVerifyOtp = (e) => {
+    e.preventDefault();
+    if (otp.length === 6) {
+      setKycStep(3); // Loading
+      // Simulate API delay
+      setTimeout(() => {
+        setFormData({
+          ...formData,
+          name: "Rahul Verified", // Simulated verified name
+          age: 65 // Simulated fetching age (will trigger Senior Citizen)
+        });
+        setKycStep(4); // Verified
+      }, 2000);
+    }
   };
 
   const handleSubmit = (e) => {
@@ -43,7 +59,7 @@ const ProfileCompletion = () => {
       ...formData,
       age: ageNum,
       isSenior,
-      digiLockerLinked
+      digiLockerLinked: kycStep === 4
     });
     
     navigate('/dashboard');
@@ -54,6 +70,32 @@ const ProfileCompletion = () => {
       {/* Background elements */}
       <div className="absolute top-[-10%] right-[-5%] w-[400px] h-[400px] bg-primary/5 rounded-full blur-3xl pointer-events-none" />
       <div className="absolute bottom-[-10%] left-[-5%] w-[400px] h-[400px] bg-secondary/5 rounded-full blur-3xl pointer-events-none" />
+
+      {/* Fake SMS Toast Notification */}
+      <AnimatePresence>
+        {showOtpToast && (
+          <motion.div 
+            initial={{ opacity: 0, y: -50 }}
+            animate={{ opacity: 1, y: 20 }}
+            exit={{ opacity: 0, y: -50 }}
+            className="fixed top-6 left-1/2 -translate-x-1/2 z-[100] bg-slate-900 text-white px-6 py-4 rounded-2xl shadow-2xl flex items-center justify-between gap-6 w-full max-w-md border border-slate-700"
+          >
+            <div className="flex items-center gap-4">
+              <div className="bg-green-500 p-2 rounded-full"><ShieldCheck size={20} className="text-white"/></div>
+              <div>
+                <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Message from UIDAI</p>
+                <p className="text-sm font-bold mt-1">Your DigiLocker OTP is <span className="text-green-400 text-lg ml-1">123456</span></p>
+              </div>
+            </div>
+            <button 
+              onClick={() => { setOtp('123456'); setShowOtpToast(false); }}
+              className="px-4 py-2 bg-slate-800 hover:bg-slate-700 rounded-xl text-xs font-black text-white border border-slate-600 transition-colors shrink-0"
+            >
+              Auto-fill
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       <div className="max-w-2xl w-full mx-auto relative z-10 flex-grow flex flex-col justify-center">
         <motion.div 
@@ -69,38 +111,115 @@ const ProfileCompletion = () => {
             <p className="text-slate-500 font-medium text-lg">Just a few more details to get you started.</p>
           </div>
 
-          {/* DigiLocker Simulation */}
+          {/* DigiLocker KYC Flow */}
           <div className="mb-10">
-            {!digiLockerLinked ? (
-              <button 
-                onClick={simulateDigiLocker}
-                disabled={digiLockerLoading}
-                className="w-full flex items-center justify-center gap-3 p-6 bg-slate-50 border border-slate-200 rounded-2xl hover:border-primary/50 transition-colors shadow-sm disabled:opacity-70 group"
-              >
-                {digiLockerLoading ? (
-                  <Loader2 className="animate-spin text-primary" size={24} />
-                ) : (
+            <AnimatePresence mode="wait">
+              {kycStep === 0 && (
+                <motion.button 
+                  key="start"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  onClick={() => setKycStep(1)}
+                  className="w-full flex items-center justify-center gap-3 p-6 bg-slate-50 border border-slate-200 rounded-2xl hover:border-primary/50 transition-colors shadow-sm group"
+                >
                   <ShieldCheck className="text-green-600 group-hover:scale-110 transition-transform" size={24} />
-                )}
-                <div className="text-left">
-                  <h3 className="font-black text-slate-800 text-lg">Link DigiLocker (Recommended)</h3>
-                  <p className="text-xs text-slate-500 font-medium">Auto-fetch details & get verified instantly.</p>
-                </div>
-              </button>
-            ) : (
-              <div className="w-full flex items-center gap-4 p-6 bg-green-50 border border-green-200 rounded-2xl">
-                <div className="p-3 bg-green-100 rounded-full text-green-600"><FileCheck size={24} /></div>
-                <div>
-                  <h3 className="font-black text-green-800 text-lg">DigiLocker Linked</h3>
-                  <p className="text-xs text-green-600 font-bold uppercase tracking-widest">KYC Verified Successfully</p>
-                </div>
-              </div>
-            )}
+                  <div className="text-left">
+                    <h3 className="font-black text-slate-800 text-lg">Link DigiLocker / KYC</h3>
+                    <p className="text-xs text-slate-500 font-medium">Verify Aadhaar to auto-fill details & get priority.</p>
+                  </div>
+                </motion.button>
+              )}
+
+              {kycStep === 1 && (
+                <motion.form 
+                  key="aadhaar"
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -10 }}
+                  onSubmit={handleSendOtp}
+                  className="p-6 bg-slate-50 border border-slate-200 rounded-2xl space-y-4"
+                >
+                  <div>
+                    <label className="text-[10px] uppercase font-black text-slate-500 tracking-widest ml-1">Enter 12-Digit Aadhaar</label>
+                    <input 
+                      type="text" 
+                      maxLength="12"
+                      required
+                      value={aadhaar}
+                      onChange={(e) => setAadhaar(e.target.value.replace(/\D/g, ''))}
+                      placeholder="XXXX XXXX XXXX"
+                      className="w-full bg-white border border-slate-200 rounded-xl py-3 px-4 outline-none focus:border-primary font-bold text-slate-700 mt-1"
+                    />
+                  </div>
+                  <div className="flex gap-3">
+                    <button type="button" onClick={() => setKycStep(0)} className="px-6 py-3 bg-white border border-slate-200 rounded-xl text-sm font-bold text-slate-600 hover:bg-slate-100">Cancel</button>
+                    <button type="submit" disabled={aadhaar.length !== 12} className="flex-1 px-6 py-3 bg-green-600 text-white rounded-xl text-sm font-bold hover:bg-green-700 disabled:opacity-50">Get OTP</button>
+                  </div>
+                </motion.form>
+              )}
+
+              {kycStep === 2 && (
+                <motion.form 
+                  key="otp"
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -10 }}
+                  onSubmit={handleVerifyOtp}
+                  className="p-6 bg-slate-50 border border-slate-200 rounded-2xl space-y-4"
+                >
+                  <div>
+                    <label className="text-[10px] uppercase font-black text-slate-500 tracking-widest ml-1">Enter OTP sent to linked mobile</label>
+                    <input 
+                      type="text" 
+                      maxLength="6"
+                      required
+                      value={otp}
+                      onChange={(e) => setOtp(e.target.value.replace(/\D/g, ''))}
+                      placeholder="XXXXXX"
+                      className="w-full bg-white border border-slate-200 rounded-xl py-3 px-4 outline-none focus:border-primary font-bold tracking-[0.5em] text-center text-slate-700 mt-1"
+                    />
+                  </div>
+                  <div className="flex gap-3">
+                    <button type="button" onClick={() => setKycStep(1)} className="px-6 py-3 bg-white border border-slate-200 rounded-xl text-sm font-bold text-slate-600 hover:bg-slate-100">Back</button>
+                    <button type="submit" disabled={otp.length !== 6} className="flex-1 px-6 py-3 bg-green-600 text-white rounded-xl text-sm font-bold hover:bg-green-700 disabled:opacity-50">Verify KYC</button>
+                  </div>
+                </motion.form>
+              )}
+
+              {kycStep === 3 && (
+                <motion.div 
+                  key="loading"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  className="p-8 bg-slate-50 border border-slate-200 rounded-2xl flex flex-col items-center justify-center gap-4"
+                >
+                  <Loader2 className="animate-spin text-primary" size={32} />
+                  <p className="text-sm font-bold text-slate-600">Verifying documents securely...</p>
+                </motion.div>
+              )}
+
+              {kycStep === 4 && (
+                <motion.div 
+                  key="verified"
+                  initial={{ opacity: 0, scale: 0.95 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  className="w-full flex items-center gap-4 p-6 bg-green-50 border border-green-200 rounded-2xl shadow-sm"
+                >
+                  <div className="p-3 bg-green-500 rounded-full text-white shadow-md shadow-green-200"><CheckCircle2 size={24} /></div>
+                  <div>
+                    <h3 className="font-black text-green-800 text-lg">KYC Verified Successfully</h3>
+                    <p className="text-xs text-green-700 font-bold uppercase tracking-widest mt-1">DigiLocker Linked • Aadhaar Fetched</p>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
           </div>
 
           <div className="flex items-center gap-4 mb-8">
             <div className="flex-grow h-px bg-slate-200"></div>
-            <span className="text-xs text-slate-400 font-bold uppercase tracking-widest">Or enter manually</span>
+            <span className="text-xs text-slate-400 font-bold uppercase tracking-widest">Profile Details</span>
             <div className="flex-grow h-px bg-slate-200"></div>
           </div>
 
@@ -115,6 +234,7 @@ const ProfileCompletion = () => {
                   value={formData.name}
                   onChange={(e) => setFormData({...formData, name: e.target.value})}
                   className="w-full bg-white border border-slate-200 rounded-2xl py-4 pl-12 pr-4 outline-none focus:border-primary font-bold text-slate-700 shadow-sm"
+                  readOnly={kycStep === 4}
                 />
               </div>
             </div>
@@ -148,6 +268,7 @@ const ProfileCompletion = () => {
                     onChange={(e) => setFormData({...formData, age: e.target.value})}
                     placeholder="e.g. 35"
                     className="w-full bg-white border border-slate-200 rounded-2xl py-4 pl-12 pr-4 outline-none focus:border-primary font-bold text-slate-700 shadow-sm"
+                    readOnly={kycStep === 4}
                   />
                 </div>
               </div>

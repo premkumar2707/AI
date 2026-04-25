@@ -1,5 +1,5 @@
 import React, { memo, useState } from 'react';
-import { ShieldCheck, MapPin, Ticket, Clock, LogIn, Users, Smartphone, Sparkles, Star, ArrowRight } from 'lucide-react';
+import { ShieldCheck, MapPin, Ticket, Clock, LogIn, Users, Smartphone, Sparkles, Star, ArrowRight, LogOut } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { Link, useNavigate } from 'react-router-dom';
 import AuthModal from '../components/AuthModal';
@@ -7,8 +7,14 @@ import { useAuth } from '../context/AuthContext';
 
 const LandingPage = () => {
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
-  const { user } = useAuth();
+  const [authMode, setAuthMode] = useState('login');
+  const { user, logout } = useAuth();
   const navigate = useNavigate();
+
+  const openAuth = (mode) => {
+    setAuthMode(mode);
+    setIsAuthModalOpen(true);
+  };
 
   return (
     <div className="relative min-h-screen w-full overflow-hidden flex flex-col font-outfit bg-white">
@@ -46,11 +52,17 @@ const LandingPage = () => {
             Queue<span className="text-primary">Smart</span>
           </span>
         </Link>
-        <div className="hidden md:flex gap-8 text-xs font-black text-slate-500 uppercase tracking-widest">
+        <div className="hidden md:flex gap-8 text-xs font-black text-slate-500 uppercase tracking-widest items-center">
           {user && <Link to="/dashboard" className="hover:text-primary transition-colors">Dashboard</Link>}
+          {user && <Link to="/profile-setup" className="hover:text-primary transition-colors">Profile & KYC</Link>}
           <Link to="/find-centers" className="hover:text-primary transition-colors">Find Centers</Link>
           <Link to="/smart-planner" className="hover:text-primary transition-colors">Smart Planner</Link>
           <Link to="/staff" className="m3-button m3-button-gold py-2 px-6">Admin</Link>
+          {user && (
+            <button onClick={logout} className="hover:text-rose-500 transition-colors flex items-center gap-1">
+              <LogOut size={14} /> Sign Out
+            </button>
+          )}
         </div>
       </nav>
 
@@ -80,23 +92,39 @@ const LandingPage = () => {
 
               <div className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-4">
                 {user ? (
-                  <button 
-                    onClick={() => navigate('/dashboard')}
-                    className="w-full sm:w-auto m3-button m3-button-gold px-10 py-5 text-lg shadow-gold"
-                  >
-                    Go to Dashboard <ArrowRight size={20} className="ml-2" />
-                  </button>
+                  <div className="flex flex-col sm:flex-row gap-4 w-full sm:w-auto">
+                    <button 
+                      onClick={() => navigate('/dashboard')}
+                      className="w-full sm:w-auto m3-button m3-button-gold px-10 py-5 text-lg shadow-gold"
+                    >
+                      Dashboard <ArrowRight size={20} className="ml-2" />
+                    </button>
+                    <button 
+                      onClick={logout}
+                      className="w-full sm:w-auto m3-button m3-button-sky px-10 py-5 text-lg shadow-blue"
+                    >
+                      <LogOut size={20} className="mr-2" /> Sign Out
+                    </button>
+                  </div>
                 ) : (
-                  <button 
-                    onClick={() => setIsAuthModalOpen(true)}
-                    className="w-full sm:w-auto m3-button m3-button-gold px-10 py-5 text-lg shadow-gold"
-                  >
-                    <LogIn size={20} /> Sign in
-                  </button>
+                  <div className="flex flex-col sm:flex-row gap-4 w-full sm:w-auto">
+                    <button 
+                      onClick={() => openAuth('login')}
+                      className="w-full sm:w-auto m3-button m3-button-gold px-10 py-5 text-lg shadow-gold"
+                    >
+                      <LogIn size={20} className="mr-2"/> Sign In
+                    </button>
+                    <button 
+                      onClick={() => openAuth('signup')}
+                      className="w-full sm:w-auto m3-button m3-button-sky px-10 py-5 text-lg shadow-blue"
+                    >
+                      <Users size={20} className="mr-2"/> Sign Up
+                    </button>
+                  </div>
                 )}
                 
-                <Link to="/kiosk" className="w-full sm:w-auto m3-button m3-button-sky px-10 py-5 text-lg shadow-blue">
-                  <Smartphone size={20} /> Kiosk Mode
+                <Link to="/kiosk" className="w-full sm:w-auto m3-button bg-white text-slate-700 border-2 border-slate-200 px-10 py-5 text-lg shadow-sm hover:border-slate-300">
+                  <Smartphone size={20} className="mr-2"/> Kiosk Mode
                 </Link>
               </div>
 
@@ -124,7 +152,7 @@ const LandingPage = () => {
       </div>
 
       {/* Auth Modal UI */}
-      <AuthModal isOpen={isAuthModalOpen} onClose={() => setIsAuthModalOpen(false)} />
+      <AuthModal isOpen={isAuthModalOpen} onClose={() => setIsAuthModalOpen(false)} initialMode={authMode} />
     </div>
   );
 };

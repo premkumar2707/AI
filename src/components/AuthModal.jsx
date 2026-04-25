@@ -1,23 +1,31 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, LogIn, UserPlus, Mail, Lock, User, Sparkles } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 
-const AuthModal = ({ isOpen, onClose }) => {
-  const [isLogin, setIsLogin] = useState(true);
+const AuthModal = ({ isOpen, onClose, initialMode = 'login' }) => {
+  const [isLogin, setIsLogin] = useState(initialMode === 'login');
   const [email, setEmail] = useState('');
   const [name, setName] = useState('');
   const [password, setPassword] = useState('');
   const navigate = useNavigate();
   const { login, signup } = useAuth();
 
+  useEffect(() => {
+    if (isOpen) setIsLogin(initialMode === 'login');
+  }, [isOpen, initialMode]);
+
   const handleSubmit = (e) => {
     e.preventDefault();
     if (isLogin) {
-      login(email);
+      const loggedInUser = login(email);
       onClose();
-      navigate('/dashboard');
+      if (loggedInUser.isNew) {
+        navigate('/profile-setup');
+      } else {
+        navigate('/dashboard');
+      }
     } else {
       signup(email, name);
       onClose();

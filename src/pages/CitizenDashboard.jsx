@@ -1,14 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ShieldCheck, User, Building, HeartPulse, Bus, Zap, Landmark, AlertTriangle, ArrowRight, FileText, CheckCircle2, Navigation } from 'lucide-react';
+import { ShieldCheck, User, Building, HeartPulse, Bus, Zap, Landmark, AlertTriangle, ArrowRight, FileText, CheckCircle2, Navigation, Sparkles } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 const CitizenDashboard = () => {
   const { user, tokens, bookToken } = useAuth();
   const navigate = useNavigate();
   const [selectedCategory, setSelectedCategory] = useState(null);
-  const [isEmergency, setIsEmergency] = useState(false);
+  const [isEmergency, setIsEmergency] = useState(null);
   const [showRecommendation, setShowRecommendation] = useState(false);
 
   // Fallback for safety
@@ -29,7 +29,7 @@ const CitizenDashboard = () => {
   const handleCategorySelect = (catId) => {
     setSelectedCategory(catId);
     setShowRecommendation(false);
-    setIsEmergency(false);
+    setIsEmergency(null); // Reset emergency state on new category select
   };
 
   const handleBookEmergency = () => {
@@ -135,9 +135,9 @@ const CitizenDashboard = () => {
 
         {/* Dynamic UI based on selection */}
         <AnimatePresence mode="wait">
-          {selectedCategory === 'hospital' && (
-            <motion.div key="hospital" initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }} className="overflow-hidden">
-              <div className="bg-rose-50 border border-rose-200 p-8 rounded-[32px] shadow-sm">
+          {selectedCategory === 'hospital' && isEmergency === null && (
+            <motion.div key="hospital-prompt" initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }} className="overflow-hidden">
+              <div className="bg-rose-50 border border-rose-200 p-8 rounded-[32px] shadow-sm mt-4">
                 <h3 className="text-2xl font-black text-rose-800 mb-6 flex items-center gap-2">
                   <AlertTriangle /> Is this an Emergency?
                 </h3>
@@ -153,8 +153,8 @@ const CitizenDashboard = () => {
             </motion.div>
           )}
 
-          {(selectedCategory === 'bank' || selectedCategory === 'govt' || (selectedCategory === 'hospital' && !isEmergency && selectedCategory !== null)) && (
-            <motion.div key="routing" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="glass-white p-8 rounded-[32px] border border-slate-200 shadow-md">
+          {selectedCategory !== null && (selectedCategory !== 'hospital' || isEmergency === false) && (
+            <motion.div key="routing" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="glass-white p-8 rounded-[32px] border border-slate-200 shadow-md mt-4">
                <h3 className="text-xl font-black text-slate-900 mb-6">AI Smart Routing</h3>
                
                {!showRecommendation ? (

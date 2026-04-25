@@ -4,59 +4,97 @@ const AuthContext = createContext();
 
 export const useAuth = () => useContext(AuthContext);
 
+// Changed storage keys to force a fresh slate for all users
+const DB_KEY = 'qs_users_db_v2';
+const USER_KEY = 'qs_user_v2';
+const TOKENS_KEY = 'qs_tokens_v2';
+
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [tokens, setTokens] = useState([]);
 
   // Load from local storage on mount
   useEffect(() => {
-    const savedUser = localStorage.getItem('queueSmartUser');
-    const savedTokens = localStorage.getItem('queueSmartTokens');
-    if (savedUser) setUser(JSON.parse(savedUser));
-    if (savedTokens) setTokens(JSON.parse(savedTokens));
+    const savedUser = localStorage.getItem(USER_KEY);
+    const savedTokens = localStorage.getItem(TOKENS_KEY);
+    
+    if (savedUser) {
+      setUser(JSON.parse(savedUser));
+    }
+    if (savedTokens) {
+      setTokens(JSON.parse(savedTokens));
+    }
   }, []);
 
+  // Helper to manage users DB
+  const getUsersDB = () => JSON.parse(localStorage.getItem(DB_KEY) || '[]');
+  
+  const saveUserToDB = (userData) => {
+    const db = getUsersDB();
+    const index = db.findIndex(u => u.email === userData.email);
+    if (index >= 0) db[index] = userData;
+    else db.push(userData);
+    localStorage.setItem(DB_KEY, JSON.stringify(db));
+  };
+
   const login = (email) => {
-    // Simulated existing user
-    const existingUser = {
-      userId: `USR-${Math.floor(Math.random() * 10000)}`,
-      email,
-      name: "Rahul Sharma",
-      phone: "+91 9876543210",
-      age: 35,
-      isSenior: false,
-      digiLockerLinked: true,
-      createdAt: new Date().toISOString()
-    };
+    const db = getUsersDB();
+    let existingUser = db.find(u => u.email === email);
+    
+    if (!existingUser) {
+      existingUser = {
+        userId: `USR-${Math.floor(Math.random() * 10000)}`,
+        email,
+        name: email.split('@')[0], 
+        phone: "Not provided",
+        age: 0,
+        isSenior: false,
+        digiLockerLinked: false,
+        isNew: true, // Force them to complete profile
+        createdAt: new Date().toISOString()
+      };
+      saveUserToDB(existingUser);
+    }
+    
     setUser(existingUser);
-    localStorage.setItem('queueSmartUser', JSON.stringify(existingUser));
+    localStorage.setItem(USER_KEY, JSON.stringify(existingUser));
     return existingUser;
   };
 
   const signup = (email, name) => {
-    // New user (needs profile completion)
+    const db = getUsersDB();
+    const existing = db.find(u => u.email === email);
+    if (existing) return login(email); 
+
     const newUser = {
       userId: `USR-${Math.floor(Math.random() * 10000)}`,
       email,
       name,
-      isNew: true // Flag to redirect to profile completion
+      phone: '',
+      age: 0,
+      isSenior: false,
+      digiLockerLinked: false,
+      isNew: true, 
+      createdAt: new Date().toISOString()
     };
+    
+    saveUserToDB(newUser);
     setUser(newUser);
-    localStorage.setItem('queueSmartUser', JSON.stringify(newUser));
+    localStorage.setItem(USER_KEY, JSON.stringify(newUser));
     return newUser;
   };
 
   const updateProfile = (profileData) => {
     const updatedUser = { ...user, ...profileData, isNew: false };
+    saveUserToDB(updatedUser);
     setUser(updatedUser);
-    localStorage.setItem('queueSmartUser', JSON.stringify(updatedUser));
+    localStorage.setItem(USER_KEY, JSON.stringify(updatedUser));
   };
 
   const logout = () => {
     setUser(null);
-    setTokens([]);
-    localStorage.removeItem('queueSmartUser');
-    localStorage.removeItem('queueSmartTokens');
+    localStorage.removeItem(USER_KEY);
+    // Keep tokens in storage so history persists, but it will be filtered for the next logged-in user
   };
 
   const bookToken = (tokenData) => {
@@ -69,12 +107,23 @@ export const AuthProvider = ({ children }) => {
     };
     const updatedTokens = [newToken, ...tokens];
     setTokens(updatedTokens);
-    localStorage.setItem('queueSmartTokens', JSON.stringify(updatedTokens));
+    localStorage.setItem(TOKENS_KEY, JSON.stringify(updatedTokens));
     return newToken;
   };
 
+  // Filter tokens on render based on the current user
+  const userTokens = tokens.filter(t => t.userId === user?.userId);
+
   return (
-    <AuthContext.Provider value={{ user, tokens, login, signup, updateProfile, logout, bookToken }}>
+    <AuthContext.Provider value={{ 
+      user, 
+      tokens: userTokens, 
+      login, 
+      signup, 
+      updateProfile, 
+      logout, 
+      bookToken 
+    }}>
       {children}
     </AuthContext.Provider>
   );
