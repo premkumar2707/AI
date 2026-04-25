@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { ShieldCheck, User, Phone, Calendar, ArrowRight, Loader2, FileCheck, CheckCircle2 } from 'lucide-react';
+import { ShieldCheck, User, Phone, Calendar, ArrowRight, Loader2, FileCheck, CheckCircle2, AlertTriangle } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 const ProfileCompletion = () => {
@@ -18,35 +18,65 @@ const ProfileCompletion = () => {
   const [kycStep, setKycStep] = useState(0);
   const [aadhaar, setAadhaar] = useState('');
   const [otp, setOtp] = useState('');
-  const [showOtpToast, setShowOtpToast] = useState(false);
+  const [expectedOtp, setExpectedOtp] = useState('');
+  const [isSendingOtp, setIsSendingOtp] = useState(false);
+  const [twilioError, setTwilioError] = useState(null);
 
   // If user is not present or already setup, handle appropriately (for safety)
   if (!user) {
     return <div className="min-h-screen bg-slate-50 flex items-center justify-center p-6"><p>Please sign up first.</p></div>;
   }
 
-  const handleSendOtp = (e) => {
+  const handleSendOtp = async (e) => {
     e.preventDefault();
-    if (aadhaar.length === 12) {
-      setKycStep(2);
-      setShowOtpToast(true);
-      setTimeout(() => setShowOtpToast(false), 8000); // Hide after 8 seconds
+    if (aadhaar.length === 12 && formData.phone) {
+      setIsSendingOtp(true);
+      setTwilioError(null);
+      
+      // Generate a truly random 6-digit OTP
+      const generatedOtp = Math.floor(100000 + Math.random() * 900000).toString();
+      setExpectedOtp(generatedOtp);
+
+      try {
+        // Call the local backend server that integrates with Twilio
+        const response = await fetch('http://localhost:3001/api/send-otp', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ phone: formData.phone, otp: generatedOtp })
+        });
+        const data = await response.json();
+        
+        if (data.error) {
+          setTwilioError(data.error);
+        } else {
+          console.log('Twilio response:', data);
+          setKycStep(2); // Move to OTP entry step only if it didn't throw a fatal network error
+        }
+      } catch (error) {
+        console.error('Failed to call Twilio backend:', error);
+        setTwilioError("Failed to reach the backend server. Is it running?");
+      }
+      
+      setIsSendingOtp(false);
     }
   };
 
   const handleVerifyOtp = (e) => {
     e.preventDefault();
-    if (otp.length === 6) {
+    if (otp === expectedOtp) {
+      setTwilioError(null);
       setKycStep(3); // Loading
-      // Simulate API delay
+      // Simulate API delay for verifying documents
       setTimeout(() => {
         setFormData({
           ...formData,
-          name: "Rahul Verified", // Simulated verified name
+          name: "Aadhaar Verified Citizen", // Simulated verified name
           age: 65 // Simulated fetching age (will trigger Senior Citizen)
         });
         setKycStep(4); // Verified
       }, 2000);
+    } else {
+      setTwilioError("Invalid OTP entered. Please try again.");
     }
   };
 
@@ -70,32 +100,6 @@ const ProfileCompletion = () => {
       {/* Background elements */}
       <div className="absolute top-[-10%] right-[-5%] w-[400px] h-[400px] bg-primary/5 rounded-full blur-3xl pointer-events-none" />
       <div className="absolute bottom-[-10%] left-[-5%] w-[400px] h-[400px] bg-secondary/5 rounded-full blur-3xl pointer-events-none" />
-
-      {/* Fake SMS Toast Notification */}
-      <AnimatePresence>
-        {showOtpToast && (
-          <motion.div 
-            initial={{ opacity: 0, y: -50 }}
-            animate={{ opacity: 1, y: 20 }}
-            exit={{ opacity: 0, y: -50 }}
-            className="fixed top-6 left-1/2 -translate-x-1/2 z-[100] bg-slate-900 text-white px-6 py-4 rounded-2xl shadow-2xl flex items-center justify-between gap-6 w-full max-w-md border border-slate-700"
-          >
-            <div className="flex items-center gap-4">
-              <div className="bg-green-500 p-2 rounded-full"><ShieldCheck size={20} className="text-white"/></div>
-              <div>
-                <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Message from UIDAI</p>
-                <p className="text-sm font-bold mt-1">Your DigiLocker OTP is <span className="text-green-400 text-lg ml-1">123456</span></p>
-              </div>
-            </div>
-            <button 
-              onClick={() => { setOtp('123456'); setShowOtpToast(false); }}
-              className="px-4 py-2 bg-slate-800 hover:bg-slate-700 rounded-xl text-xs font-black text-white border border-slate-600 transition-colors shrink-0"
-            >
-              Auto-fill
-            </button>
-          </motion.div>
-        )}
-      </AnimatePresence>
 
       <div className="max-w-2xl w-full mx-auto relative z-10 flex-grow flex flex-col justify-center">
         <motion.div 
@@ -126,7 +130,7 @@ const ProfileCompletion = () => {
                   <ShieldCheck className="text-green-600 group-hover:scale-110 transition-transform" size={24} />
                   <div className="text-left">
                     <h3 className="font-black text-slate-800 text-lg">Link DigiLocker / KYC</h3>
-                    <p className="text-xs text-slate-500 font-medium">Verify Aadhaar to auto-fill details & get priority.</p>
+                    <p className="text-xs text-slate-500 font-medium">Verify Aadhaar via Twilio SMS OTP.</p>
                   </div>
                 </motion.button>
               )}
@@ -138,7 +142,7 @@ const ProfileCompletion = () => {
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: -10 }}
                   onSubmit={handleSendOtp}
-                  className="p-6 bg-slate-50 border border-slate-200 rounded-2xl space-y-4"
+                  className="p-6 bg-slate-50 border border-slate-200 rounded-2xl space-y-5 relative"
                 >
                   <div>
                     <label className="text-[10px] uppercase font-black text-slate-500 tracking-widest ml-1">Enter 12-Digit Aadhaar</label>
@@ -152,9 +156,30 @@ const ProfileCompletion = () => {
                       className="w-full bg-white border border-slate-200 rounded-xl py-3 px-4 outline-none focus:border-primary font-bold text-slate-700 mt-1"
                     />
                   </div>
-                  <div className="flex gap-3">
+
+                  <div>
+                    <label className="text-[10px] uppercase font-black text-slate-500 tracking-widest ml-1">Your Phone Number (For Twilio OTP)</label>
+                    <input 
+                      type="tel" 
+                      required
+                      value={formData.phone}
+                      onChange={(e) => setFormData({...formData, phone: e.target.value})}
+                      placeholder="+919876543210"
+                      className="w-full bg-white border border-slate-200 rounded-xl py-3 px-4 outline-none focus:border-primary font-bold text-slate-700 mt-1"
+                    />
+                  </div>
+                  
+                  {twilioError && (
+                    <div className="bg-rose-50 text-rose-600 p-3 rounded-lg text-xs font-bold flex items-center gap-2 border border-rose-200">
+                      <AlertTriangle size={14} className="shrink-0" /> {twilioError}
+                    </div>
+                  )}
+
+                  <div className="flex gap-3 pt-2">
                     <button type="button" onClick={() => setKycStep(0)} className="px-6 py-3 bg-white border border-slate-200 rounded-xl text-sm font-bold text-slate-600 hover:bg-slate-100">Cancel</button>
-                    <button type="submit" disabled={aadhaar.length !== 12} className="flex-1 px-6 py-3 bg-green-600 text-white rounded-xl text-sm font-bold hover:bg-green-700 disabled:opacity-50">Get OTP</button>
+                    <button type="submit" disabled={aadhaar.length !== 12 || !formData.phone || isSendingOtp} className="flex-1 px-6 py-3 bg-green-600 text-white rounded-xl text-sm font-bold hover:bg-green-700 disabled:opacity-50 flex items-center justify-center gap-2">
+                      {isSendingOtp ? <Loader2 size={18} className="animate-spin" /> : "Send Twilio OTP"}
+                    </button>
                   </div>
                 </motion.form>
               )}
@@ -166,10 +191,10 @@ const ProfileCompletion = () => {
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: -10 }}
                   onSubmit={handleVerifyOtp}
-                  className="p-6 bg-slate-50 border border-slate-200 rounded-2xl space-y-4"
+                  className="p-6 bg-slate-50 border border-slate-200 rounded-2xl space-y-4 relative"
                 >
                   <div>
-                    <label className="text-[10px] uppercase font-black text-slate-500 tracking-widest ml-1">Enter OTP sent to linked mobile</label>
+                    <label className="text-[10px] uppercase font-black text-slate-500 tracking-widest ml-1">Enter OTP sent via Twilio to {formData.phone}</label>
                     <input 
                       type="text" 
                       maxLength="6"
@@ -180,9 +205,16 @@ const ProfileCompletion = () => {
                       className="w-full bg-white border border-slate-200 rounded-xl py-3 px-4 outline-none focus:border-primary font-bold tracking-[0.5em] text-center text-slate-700 mt-1"
                     />
                   </div>
+
+                  {twilioError && (
+                    <div className="bg-rose-50 text-rose-600 p-3 rounded-lg text-xs font-bold flex items-center gap-2 border border-rose-200">
+                      <AlertTriangle size={14} /> {twilioError}
+                    </div>
+                  )}
+
                   <div className="flex gap-3">
                     <button type="button" onClick={() => setKycStep(1)} className="px-6 py-3 bg-white border border-slate-200 rounded-xl text-sm font-bold text-slate-600 hover:bg-slate-100">Back</button>
-                    <button type="submit" disabled={otp.length !== 6} className="flex-1 px-6 py-3 bg-green-600 text-white rounded-xl text-sm font-bold hover:bg-green-700 disabled:opacity-50">Verify KYC</button>
+                    <button type="submit" disabled={otp.length !== 6} className="flex-1 px-6 py-3 bg-green-600 text-white rounded-xl text-sm font-bold hover:bg-green-700 disabled:opacity-50">Verify Real OTP</button>
                   </div>
                 </motion.form>
               )}
@@ -196,7 +228,7 @@ const ProfileCompletion = () => {
                   className="p-8 bg-slate-50 border border-slate-200 rounded-2xl flex flex-col items-center justify-center gap-4"
                 >
                   <Loader2 className="animate-spin text-primary" size={32} />
-                  <p className="text-sm font-bold text-slate-600">Verifying documents securely...</p>
+                  <p className="text-sm font-bold text-slate-600">Verifying Twilio OTP & Fetching Aadhaar...</p>
                 </motion.div>
               )}
 
@@ -209,7 +241,7 @@ const ProfileCompletion = () => {
                 >
                   <div className="p-3 bg-green-500 rounded-full text-white shadow-md shadow-green-200"><CheckCircle2 size={24} /></div>
                   <div>
-                    <h3 className="font-black text-green-800 text-lg">KYC Verified Successfully</h3>
+                    <h3 className="font-black text-green-800 text-lg">KYC Verified via Twilio</h3>
                     <p className="text-xs text-green-700 font-bold uppercase tracking-widest mt-1">DigiLocker Linked • Aadhaar Fetched</p>
                   </div>
                 </motion.div>
@@ -240,6 +272,7 @@ const ProfileCompletion = () => {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* Phone number is now strictly asked in the KYC box if it is empty, but we keep it here for users who don't want to do KYC */}
               <div className="space-y-2">
                 <label className="text-[10px] uppercase font-black text-slate-400 tracking-widest ml-1">Phone Number</label>
                 <div className="relative">
@@ -249,8 +282,9 @@ const ProfileCompletion = () => {
                     required
                     value={formData.phone}
                     onChange={(e) => setFormData({...formData, phone: e.target.value})}
-                    placeholder="+91 XXXXX XXXXX"
+                    placeholder="+919876543210"
                     className="w-full bg-white border border-slate-200 rounded-2xl py-4 pl-12 pr-4 outline-none focus:border-primary font-bold text-slate-700 shadow-sm"
+                    readOnly={kycStep === 4}
                   />
                 </div>
               </div>
