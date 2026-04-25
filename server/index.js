@@ -1,15 +1,17 @@
 import express from 'express';
 import cors from 'cors';
 import twilio from 'twilio';
+import dotenv from 'dotenv';
+dotenv.config();
 
 const app = express();
 app.use(cors());
 app.use(express.json());
 
-// ─── Twilio Credentials ────────────────────────────────────────────────────
-const TWILIO_API_KEY_SID    = 'REMOVED_KEY_SID';
-const TWILIO_API_KEY_SECRET = 'REMOVED_KEY_SECRET';
-const TWILIO_ACCOUNT_SID    = 'REMOVED_ACCOUNT_SID';
+// ─── Twilio Credentials (loaded from .env) ─────────────────────────────────
+const TWILIO_API_KEY_SID    = process.env.TWILIO_API_KEY_SID;
+const TWILIO_API_KEY_SECRET = process.env.TWILIO_API_KEY_SECRET;
+const TWILIO_ACCOUNT_SID    = process.env.TWILIO_ACCOUNT_SID;
 
 const client = twilio(TWILIO_API_KEY_SID, TWILIO_API_KEY_SECRET, {
   accountSid: TWILIO_ACCOUNT_SID
