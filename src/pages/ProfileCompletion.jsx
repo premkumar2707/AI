@@ -254,7 +254,10 @@ const ProfileCompletion = () => {
 
           <form onSubmit={handleSubmit} className="space-y-6">
             <div className="space-y-2">
-              <label className="text-[10px] uppercase font-black text-slate-400 tracking-widest ml-1">Full Name</label>
+              <div className="flex items-center gap-2 ml-1">
+                <label className="text-[10px] uppercase font-black text-slate-400 tracking-widest">Full Name</label>
+                {kycStep === 4 && <span className="text-[9px] bg-green-100 text-green-700 font-black px-2 py-0.5 rounded-full uppercase tracking-widest">✓ KYC Verified</span>}
+              </div>
               <div className="relative">
                 <User className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
                 <input 
@@ -263,13 +266,11 @@ const ProfileCompletion = () => {
                   value={formData.name}
                   onChange={(e) => setFormData({...formData, name: e.target.value})}
                   className="w-full bg-white border border-slate-200 rounded-2xl py-4 pl-12 pr-4 outline-none focus:border-primary font-bold text-slate-700 shadow-sm"
-                  readOnly={kycStep === 4}
                 />
               </div>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {/* Phone number is now strictly asked in the KYC box if it is empty, but we keep it here for users who don't want to do KYC */}
               <div className="space-y-2">
                 <label className="text-[10px] uppercase font-black text-slate-400 tracking-widest ml-1">Phone Number</label>
                 <div className="relative">
@@ -281,7 +282,6 @@ const ProfileCompletion = () => {
                     onChange={(e) => setFormData({...formData, phone: e.target.value})}
                     placeholder="+919876543210"
                     className="w-full bg-white border border-slate-200 rounded-2xl py-4 pl-12 pr-4 outline-none focus:border-primary font-bold text-slate-700 shadow-sm"
-                    readOnly={kycStep === 4}
                   />
                 </div>
               </div>
@@ -299,7 +299,6 @@ const ProfileCompletion = () => {
                     onChange={(e) => setFormData({...formData, age: e.target.value})}
                     placeholder="e.g. 35"
                     className="w-full bg-white border border-slate-200 rounded-2xl py-4 pl-12 pr-4 outline-none focus:border-primary font-bold text-slate-700 shadow-sm"
-                    readOnly={kycStep === 4}
                   />
                 </div>
               </div>
