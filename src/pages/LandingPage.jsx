@@ -18,28 +18,45 @@ const LandingPage = () => {
 
   return (
     <div className="relative min-h-screen w-full overflow-hidden flex flex-col font-outfit bg-white">
-      {/* Optimized Background Layer */}
-      <div className="absolute inset-0 z-0 bg-slate-50">
-        <video
-          autoPlay
-          loop
-          muted
-          playsInline
-          className="w-full h-full object-cover opacity-60"
-          style={{ filter: 'brightness(1.1)' }}
+      {/* Optimized Background Layer with 3D Effect */}
+      <div className="absolute inset-0 z-0 bg-slate-900 perspective-[1000px] overflow-hidden">
+        <motion.div 
+          className="absolute inset-[-20%] w-[140%] h-[140%] origin-bottom"
+          animate={{
+            rotateX: [15, 5, 15],
+            y: ['0%', '10%', '0%']
+          }}
+          transition={{
+            duration: 20,
+            repeat: Infinity,
+            ease: "easeInOut"
+          }}
         >
-          <source 
-            src="https://assets.mixkit.co/videos/preview/mixkit-city-skyline-at-night-with-bright-lights-1188-large.mp4" 
-            type="video/mp4" 
-          />
-        </video>
-        <div className="absolute inset-0 bg-gradient-to-br from-white/60 via-secondary-light/10 to-primary-light/10" />
+          <video
+            autoPlay
+            loop
+            muted
+            playsInline
+            className="w-full h-full object-cover opacity-60 mix-blend-screen"
+            style={{ filter: 'brightness(1.1)' }}
+          >
+            <source 
+              src="/bengaluru-bg.mp4" 
+              type="video/mp4" 
+            />
+          </video>
+          
+          {/* Dynamic 3D Grid Overlay */}
+          <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.05)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.05)_1px,transparent_1px)] bg-[size:60px_60px] [transform:rotateX(60deg)_translateZ(-200px)_scale(1.5)] opacity-30 animate-grid-flow pointer-events-none" />
+          
+          <div className="absolute inset-0 bg-gradient-to-br from-slate-900/80 via-secondary-dark/40 to-primary-dark/40 mix-blend-multiply" />
+        </motion.div>
       </div>
 
       {/* Simplified Decorative Elements */}
       <div className="absolute inset-0 pointer-events-none z-10 overflow-hidden">
-        <div className="absolute top-1/4 left-10 w-32 h-32 bg-secondary-light/10 rounded-full blur-2xl" />
-        <div className="absolute bottom-1/4 right-10 w-48 h-48 bg-primary-light/10 rounded-full blur-2xl" />
+        <div className="absolute top-1/4 left-10 w-32 h-32 bg-secondary-light/20 rounded-full blur-3xl" />
+        <div className="absolute bottom-1/4 right-10 w-48 h-48 bg-primary-light/20 rounded-full blur-3xl" />
       </div>
 
       {/* Navigation */}
@@ -79,6 +96,10 @@ const LandingPage = () => {
                 <div className="inline-flex items-center gap-2 px-4 py-2 bg-secondary-light/20 text-secondary-dark rounded-full text-[10px] font-black uppercase tracking-widest">
                   <Sparkles size={12} /> Built for Bharat
                 </div>
+                
+                <h2 className="text-3xl md:text-5xl font-black text-slate-700 tracking-tighter mt-4">
+                  Namaskara <span className="text-primary italic">Bengaluru</span>
+                </h2>
                 
                 <h1 className="text-5xl md:text-8xl font-black text-slate-900 leading-tight tracking-tighter">
                   Queue<span className="text-primary italic">Smart</span>

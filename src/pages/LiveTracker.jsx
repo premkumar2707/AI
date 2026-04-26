@@ -80,7 +80,7 @@ const LiveTracker = () => {
   const strokeDashoffset = circumference - (progress / 100) * circumference;
 
   return (
-    <div className="min-h-screen bg-white text-slate-800 p-6 md:p-12 font-outfit overflow-y-auto">
+    <div className="min-h-screen bg-transparent text-slate-800 p-6 md:p-12 font-outfit overflow-y-auto">
       {/* Header */}
       <div className="flex items-center justify-between mb-8 max-w-2xl mx-auto">
         <Link to="/dashboard" className="p-3 bg-slate-50 hover:bg-slate-100 rounded-full transition-colors border border-slate-100 shadow-sm">

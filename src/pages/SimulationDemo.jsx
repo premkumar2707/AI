@@ -26,7 +26,7 @@ const SimulationDemo = memo(() => {
   };
 
   return (
-    <div className="min-h-screen bg-white text-slate-800 p-6 md:p-12 lg:p-20 font-outfit overflow-y-auto">
+    <div className="min-h-screen bg-transparent text-slate-800 p-6 md:p-12 lg:p-20 font-outfit overflow-y-auto">
       <header className="mb-10 md:mb-16 text-center max-w-2xl mx-auto">
         <h1 className="text-4xl md:text-5xl font-black mb-4 text-slate-900 tracking-tighter">Multi-Channel Simulation</h1>
         <p className="text-slate-500 italic text-sm md:text-lg font-medium">Inclusive queuing for non-smartphone users</p>

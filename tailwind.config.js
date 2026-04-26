@@ -33,6 +33,15 @@ export default {
       boxShadow: {
         'gold': '0 10px 30px -10px rgba(212, 175, 55, 0.3)',
         'blue': '0 10px 30px -10px rgba(0, 191, 255, 0.3)',
+      },
+      animation: {
+        'grid-flow': 'grid-flow 20s linear infinite',
+      },
+      keyframes: {
+        'grid-flow': {
+          '0%': { transform: 'rotateX(60deg) translateZ(-200px) translateY(0) scale(1.5)' },
+          '100%': { transform: 'rotateX(60deg) translateZ(-200px) translateY(60px) scale(1.5)' },
+        }
       }
     },
   },

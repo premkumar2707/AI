@@ -2,6 +2,7 @@ import React from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
 import Footer from './Footer';
 import GlobalTools from './GlobalTools';
+import QueueBackground3D from './QueueBackground3D';
 
 const Layout = () => {
   const location = useLocation();
@@ -9,9 +10,10 @@ const Layout = () => {
   const isSimulation = location.pathname === '/simulation';
 
   return (
-    <div className="min-h-screen flex flex-col bg-white text-slate-800 transition-colors duration-300 font-outfit">
+    <div className="min-h-screen flex flex-col bg-transparent text-slate-800 transition-colors duration-300 font-outfit relative">
+      <QueueBackground3D />
       {/* Live Sync Status Bar */}
-      <div className="bg-slate-900 text-white py-1 px-4 flex items-center justify-center gap-4 z-[200]">
+      <div className="bg-slate-900/80 backdrop-blur-md text-white py-1 px-4 flex items-center justify-center gap-4 z-[200]">
         <div className="flex items-center gap-2">
           <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
           <span className="text-[10px] font-black uppercase tracking-widest">Real-time DB Connected</span>

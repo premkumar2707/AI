@@ -6,7 +6,7 @@ const SmartVisitPlanner = () => {
   const [showPlan, setShowPlan] = useState(false);
 
   return (
-    <div className="min-h-screen bg-white text-slate-800 p-6 md:p-20 font-outfit overflow-y-auto">
+    <div className="min-h-screen bg-transparent text-slate-800 p-6 md:p-20 font-outfit overflow-y-auto">
       <div className="max-w-4xl mx-auto space-y-12">
         <header className="text-center space-y-4">
           <div className="inline-flex items-center gap-2 px-4 py-2 bg-primary/10 rounded-full border border-primary/20 text-primary text-xs font-black uppercase tracking-widest">
