@@ -38,8 +38,7 @@ const ProfileCompletion = () => {
       setExpectedOtp(generatedOtp);
 
       try {
-        // Call the local backend server that integrates with Twilio
-        const response = await fetch('http://localhost:3001/api/send-otp', {
+        const response = await fetch('/api/send-otp', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ phone: formData.phone, otp: generatedOtp })
