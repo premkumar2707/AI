@@ -1,8 +1,12 @@
 import express from 'express';
 import cors from 'cors';
 import twilio from 'twilio';
+import path from 'path';
+import { fileURLToPath } from 'url';
 import dotenv from 'dotenv';
-dotenv.config();
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+dotenv.config({ path: path.join(__dirname, '.env') });
 
 const app = express();
 app.use(cors());
@@ -12,6 +16,10 @@ app.use(express.json());
 const TWILIO_API_KEY_SID    = process.env.TWILIO_API_KEY_SID;
 const TWILIO_API_KEY_SECRET = process.env.TWILIO_API_KEY_SECRET;
 const TWILIO_ACCOUNT_SID    = process.env.TWILIO_ACCOUNT_SID;
+
+if (!TWILIO_API_KEY_SID || !TWILIO_API_KEY_SECRET || !TWILIO_ACCOUNT_SID) {
+  console.error('[ERROR] Missing Twilio credentials in .env file!');
+}
 
 const client = twilio(TWILIO_API_KEY_SID, TWILIO_API_KEY_SECRET, {
   accountSid: TWILIO_ACCOUNT_SID
