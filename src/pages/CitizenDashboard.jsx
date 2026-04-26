@@ -1,20 +1,21 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ShieldCheck, User, Building, HeartPulse, Bus, Zap, Landmark, AlertTriangle, ArrowRight, FileText, CheckCircle2, Navigation, Sparkles } from 'lucide-react';
+import { ShieldCheck, User, Building, HeartPulse, Bus, Zap, Landmark, AlertTriangle, CheckCircle2, Sparkles } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 const CitizenDashboard = () => {
   const { user, tokens, bookToken } = useAuth();
   const navigate = useNavigate();
+  
   const [selectedCategory, setSelectedCategory] = useState(null);
-  const [isEmergency, setIsEmergency] = useState(null);
-  const [showRecommendation, setShowRecommendation] = useState(false);
+  const [isUrgent, setIsUrgent] = useState(null);
+  
+  // AI Triage States
+  const [userDescription, setUserDescription] = useState('');
+  const [triageResult, setTriageResult] = useState(null);
 
-  // Fallback for safety
-  if (!user) {
-    return <div className="p-10 text-center"><p>Please sign in.</p></div>;
-  }
+  if (!user) return <div className="p-10 text-center"><p>Please sign in.</p></div>;
 
   const activeToken = tokens.find(t => t.status === 'waiting');
 
@@ -26,16 +27,117 @@ const CitizenDashboard = () => {
     { id: 'utility', label: 'Utilities & Bills', icon: <Zap className="text-amber-500" /> },
   ];
 
-  const handleCategorySelect = (catId) => {
-    setSelectedCategory(catId);
-    setShowRecommendation(false);
-    setIsEmergency(null); // Reset emergency state on new category select
+  const categoryConfigs = {
+    hospital: {
+      urgencyTitle: "Is this an Emergency?",
+      urgentBtn: "Yes, Book Emergency",
+      normalBtn: "No, General Checkup",
+      inputTitle: "Describe Your Symptoms",
+      inputPlaceholder: "e.g., I have been having viral fever for 3 days...",
+      urgentType: "Emergency Room",
+      normalType: "General Checkup",
+      getTriage: (desc) => {
+        let p = 'Low Priority', c = 'text-green-600 bg-green-50 border-green-200';
+        if (desc.match(/viral|fever|severe|chest|breath|accident/i)) { p = 'High Priority'; c = 'text-rose-600 bg-rose-50 border-rose-200'; }
+        else if (desc.match(/pain|vomit|dengue/i)) { p = 'Medium Priority'; c = 'text-amber-600 bg-amber-50 border-amber-200'; }
+        return { p, c, centers: [
+          { name: 'Victoria Hospital', crowd: 'Full Crowded', color: 'bg-rose-100 text-rose-700 border-rose-200', wait: '2 hrs' },
+          { name: 'Bowring Hospital', crowd: 'Mid-Range Crowd', color: 'bg-amber-100 text-amber-700 border-amber-200', wait: '45 mins' },
+          { name: 'KC General Hospital', crowd: 'Low Crowd / Free', color: 'bg-green-100 text-green-700 border-green-200', wait: '10 mins', recommended: true }
+        ]};
+      }
+    },
+    bank: {
+      urgencyTitle: "Is this a High-Value / Urgent Transaction?",
+      urgentBtn: "Yes, Urgent/High-Value",
+      normalBtn: "No, Regular Services",
+      inputTitle: "Describe Your Banking Need",
+      inputPlaceholder: "e.g., Cash deposit of over 1 Lakh, DD creation, or Fraud...",
+      urgentType: "Priority Banking",
+      normalType: "Regular Banking",
+      getTriage: (desc) => {
+        let p = 'Low Priority', c = 'text-green-600 bg-green-50 border-green-200';
+        if (desc.match(/lakh|urgent|dd|demand draft|fraud|stolen/i)) { p = 'High Priority'; c = 'text-rose-600 bg-rose-50 border-rose-200'; }
+        else if (desc.match(/cheque|loan|account/i)) { p = 'Medium Priority'; c = 'text-amber-600 bg-amber-50 border-amber-200'; }
+        return { p, c, centers: [
+          { name: 'SBI Main Branch', crowd: 'Full Crowded', color: 'bg-rose-100 text-rose-700 border-rose-200', wait: '1.5 hrs' },
+          { name: 'Canara Bank', crowd: 'Mid-Range Crowd', color: 'bg-amber-100 text-amber-700 border-amber-200', wait: '35 mins' },
+          { name: 'HDFC Branch', crowd: 'Low Crowd / Free', color: 'bg-green-100 text-green-700 border-green-200', wait: '5 mins', recommended: true }
+        ]};
+      }
+    },
+    govt: {
+      urgencyTitle: "Is there a statutory deadline today?",
+      urgentBtn: "Yes, Urgent Deadline",
+      normalBtn: "No, Regular Application",
+      inputTitle: "Describe Your Govt Service Need",
+      inputPlaceholder: "e.g., Trade license renewal, property tax payment...",
+      urgentType: "Fast-Track Services",
+      normalType: "General Services",
+      getTriage: (desc) => {
+        let p = 'Low Priority', c = 'text-green-600 bg-green-50 border-green-200';
+        if (desc.match(/tax|deadline|fine|trade|today/i)) { p = 'High Priority'; c = 'text-rose-600 bg-rose-50 border-rose-200'; }
+        else if (desc.match(/certificate|aadhar|passport/i)) { p = 'Medium Priority'; c = 'text-amber-600 bg-amber-50 border-amber-200'; }
+        return { p, c, centers: [
+          { name: 'Cauvery Bhavan', crowd: 'Full Crowded', color: 'bg-rose-100 text-rose-700 border-rose-200', wait: '2.5 hrs' },
+          { name: 'Malleshwaram BDA', crowd: 'Mid-Range Crowd', color: 'bg-amber-100 text-amber-700 border-amber-200', wait: '50 mins' },
+          { name: 'Bangalore One Center', crowd: 'Low Crowd / Free', color: 'bg-green-100 text-green-700 border-green-200', wait: '12 mins', recommended: true }
+        ]};
+      }
+    },
+    transport: {
+      urgencyTitle: "Is this for Immediate Departure?",
+      urgentBtn: "Yes, Tatkal/Immediate",
+      normalBtn: "No, Advance Booking",
+      inputTitle: "Describe Your Journey",
+      inputPlaceholder: "e.g., Tatkal ticket to Mumbai for tonight...",
+      urgentType: "Tatkal / Immediate",
+      normalType: "Advance Booking",
+      getTriage: (desc) => {
+        let p = 'Low Priority', c = 'text-green-600 bg-green-50 border-green-200';
+        if (desc.match(/tatkal|tonight|immediate|emergency|now/i)) { p = 'High Priority'; c = 'text-rose-600 bg-rose-50 border-rose-200'; }
+        else if (desc.match(/cancel|refund/i)) { p = 'Medium Priority'; c = 'text-amber-600 bg-amber-50 border-amber-200'; }
+        return { p, c, centers: [
+          { name: 'Majestic KSR Station', crowd: 'Full Crowded', color: 'bg-rose-100 text-rose-700 border-rose-200', wait: '1 hr' },
+          { name: 'Yeshwanthpur Junction', crowd: 'Mid-Range Crowd', color: 'bg-amber-100 text-amber-700 border-amber-200', wait: '30 mins' },
+          { name: 'Cantonment Station', crowd: 'Low Crowd / Free', color: 'bg-green-100 text-green-700 border-green-200', wait: '5 mins', recommended: true }
+        ]};
+      }
+    },
+    utility: {
+      urgencyTitle: "Is there a service outage or hazard?",
+      urgentBtn: "Yes, Power/Water Cut",
+      normalBtn: "No, Regular Bill Payment",
+      inputTitle: "Describe Your Utility Issue",
+      inputPlaceholder: "e.g., Power cut since 3 hours, water line leakage, sparking...",
+      urgentType: "Outage Reporting",
+      normalType: "Bill Payment & General",
+      getTriage: (desc) => {
+        let p = 'Low Priority', c = 'text-green-600 bg-green-50 border-green-200';
+        if (desc.match(/cut|outage|leak|spark|danger|fire|no water/i)) { p = 'High Priority'; c = 'text-rose-600 bg-rose-50 border-rose-200'; }
+        else if (desc.match(/new connection|meter|fault/i)) { p = 'Medium Priority'; c = 'text-amber-600 bg-amber-50 border-amber-200'; }
+        return { p, c, centers: [
+          { name: 'BESCOM Main Office', crowd: 'Full Crowded', color: 'bg-rose-100 text-rose-700 border-rose-200', wait: '45 mins' },
+          { name: 'BWSSB Central', crowd: 'Mid-Range Crowd', color: 'bg-amber-100 text-amber-700 border-amber-200', wait: '20 mins' },
+          { name: 'Local AEE Office', crowd: 'Low Crowd / Free', color: 'bg-green-100 text-green-700 border-green-200', wait: '2 mins', recommended: true }
+        ]};
+      }
+    }
   };
 
-  const handleBookEmergency = () => {
+  const handleCategorySelect = (catId) => {
+    setSelectedCategory(catId);
+    setIsUrgent(null); 
+    setUserDescription('');
+    setTriageResult(null);
+  };
+
+  const config = selectedCategory ? categoryConfigs[selectedCategory] : null;
+
+  const handleBookUrgent = () => {
     bookToken({
-      serviceType: 'Emergency Room',
-      centerId: 'HOSP-01',
+      serviceType: config.urgentType,
+      centerId: 'Nearest Available Center',
       priorityType: 'emergency',
       bookingSource: 'app',
       estimatedWait: 0
@@ -43,22 +145,15 @@ const CitizenDashboard = () => {
     navigate('/live-status');
   };
 
-  const handleSmartRouting = () => {
-    // Simulate AI Smart Routing delay
-    setTimeout(() => {
-      setShowRecommendation(true);
-    }, 1000);
-  };
-
-  const handleBookNormal = () => {
-    bookToken({
-      serviceType: selectedCategory === 'bank' ? 'Account Services' : 'General Service',
-      centerId: 'REC-01',
-      priorityType: user.isSenior ? 'senior' : 'normal',
-      bookingSource: 'app',
-      estimatedWait: user.isSenior ? 15 : 45
+  const handleAnalyze = () => {
+    if(!userDescription.trim()) return alert("Please provide a description.");
+    const triage = config.getTriage(userDescription);
+    setTriageResult({
+      description: userDescription,
+      priority: triage.p,
+      priorityColor: triage.c,
+      hospitals: triage.centers // We'll keep the variable name hospitals for centers to minimize code change
     });
-    navigate('/live-status');
   };
 
   return (
@@ -116,7 +211,7 @@ const CitizenDashboard = () => {
 
         {/* Service Categories Grid */}
         <div>
-          <h3 className="text-lg font-black text-slate-900 mb-4 uppercase tracking-widest">Select Service</h3>
+          <h3 className="text-lg font-black text-slate-900 mb-4 uppercase tracking-widest">Select Service Sector</h3>
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
             {categories.map(cat => (
               <button 
@@ -135,83 +230,96 @@ const CitizenDashboard = () => {
 
         {/* Dynamic UI based on selection */}
         <AnimatePresence mode="wait">
-          {selectedCategory === 'hospital' && isEmergency === null && (
-            <motion.div key="hospital-prompt" initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }} className="overflow-hidden">
-              <div className="bg-rose-50 border border-rose-200 p-8 rounded-[32px] shadow-sm mt-4">
-                <h3 className="text-2xl font-black text-rose-800 mb-6 flex items-center gap-2">
-                  <AlertTriangle /> Is this an Emergency?
-                </h3>
-                <div className="flex flex-col sm:flex-row gap-4">
-                  <button onClick={handleBookEmergency} className="flex-1 bg-rose-600 text-white p-6 rounded-2xl font-black text-lg shadow-lg hover:bg-rose-700 transition-colors flex items-center justify-center gap-2">
-                    <HeartPulse /> Yes, Book Emergency
-                  </button>
-                  <button onClick={() => setIsEmergency(false)} className="flex-1 bg-white border border-rose-200 text-rose-700 p-6 rounded-2xl font-bold text-lg hover:bg-rose-100 transition-colors">
-                    No, General Checkup
-                  </button>
-                </div>
-              </div>
-            </motion.div>
-          )}
-
-          {selectedCategory !== null && (selectedCategory !== 'hospital' || isEmergency === false) && (
-            <motion.div key="routing" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="glass-white p-8 rounded-[32px] border border-slate-200 shadow-md mt-4">
-               <h3 className="text-xl font-black text-slate-900 mb-6">AI Smart Routing</h3>
-               
-               {!showRecommendation ? (
-                 <div className="space-y-6">
-                   <p className="text-slate-500 font-medium">We will analyze nearby centers for <strong>{categories.find(c=>c.id===selectedCategory)?.label}</strong> based on live queue length and travel distance.</p>
-                   <button onClick={handleSmartRouting} className="w-full m3-button m3-button-gold py-5 justify-center shadow-gold font-black text-lg">
-                     <Sparkles className="mr-2" size={20} /> Find Fastest Center
-                   </button>
-                 </div>
-               ) : (
-                 <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-6">
-                    <div className="bg-primary/5 border border-primary/20 p-6 rounded-[24px]">
-                       <div className="flex justify-between items-start mb-4">
-                         <div>
-                           <span className="text-[10px] uppercase font-black tracking-widest text-primary flex items-center gap-1 mb-1">
-                             <CheckCircle2 size={12} /> Recommended Center (Lowest Wait)
-                           </span>
-                           <h4 className="text-2xl font-black text-slate-900">Cauvery Bhavan Center</h4>
-                         </div>
-                         <div className="bg-green-100 text-green-700 px-3 py-1 rounded-lg text-xs font-black uppercase tracking-widest border border-green-200">
-                           Low Crowd
-                         </div>
-                       </div>
-                       
-                       <div className="grid grid-cols-3 gap-4 mt-6 border-t border-primary/10 pt-6">
-                         <div>
-                           <p className="text-[10px] uppercase font-black text-slate-400 tracking-widest">Est. Wait</p>
-                           <p className="text-xl font-black text-slate-800">12 mins</p>
-                         </div>
-                         <div>
-                           <p className="text-[10px] uppercase font-black text-slate-400 tracking-widest">Travel</p>
-                           <p className="text-xl font-black text-slate-800">8 mins</p>
-                         </div>
-                         <div>
-                           <p className="text-[10px] uppercase font-black text-slate-400 tracking-widest">Distance</p>
-                           <p className="text-xl font-black text-slate-800">2.4 km</p>
-                         </div>
-                       </div>
+          {selectedCategory !== null && config && (
+            <motion.div key="generic-flow" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }} className="space-y-4 mt-4">
+               {/* KYC Verification Card */}
+               <div className="bg-blue-50 border border-blue-200 p-6 rounded-[24px] flex flex-col md:flex-row items-start md:items-center justify-between gap-4 shadow-sm">
+                 <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center text-blue-500 shadow-sm"><User /></div>
+                    <div>
+                      <h4 className="font-black text-slate-900">{user.name}</h4>
+                      <p className="text-sm font-medium text-slate-600">{user.phone || 'Phone not provided'}</p>
                     </div>
+                 </div>
+                 <div className="px-4 py-2 bg-white rounded-xl border border-blue-200 text-blue-700 font-black text-xs uppercase tracking-widest flex items-center gap-2 shadow-sm">
+                   <ShieldCheck size={16} /> KYC Verified Citizen
+                 </div>
+               </div>
 
-                    <div className="bg-slate-50 p-6 rounded-[24px] border border-slate-100 flex items-start gap-4">
-                      <FileText className="text-secondary shrink-0" />
-                      <div>
-                        <p className="text-sm font-black text-slate-800 mb-1">Required Documents</p>
-                        <p className="text-xs font-medium text-slate-500">Please carry your Original Aadhaar and one address proof.</p>
+               {isUrgent === null && (
+                  <div className="bg-rose-50 border border-rose-200 p-8 rounded-[32px] shadow-sm">
+                    <h3 className="text-2xl font-black text-rose-800 mb-6 flex items-center gap-2">
+                      <AlertTriangle /> {config.urgencyTitle}
+                    </h3>
+                    <div className="flex flex-col sm:flex-row gap-4">
+                      <button onClick={handleBookUrgent} className="flex-1 bg-rose-600 text-white p-6 rounded-2xl font-black text-lg shadow-lg hover:bg-rose-700 transition-colors flex items-center justify-center gap-2">
+                        <AlertTriangle size={20} /> {config.urgentBtn}
+                      </button>
+                      <button onClick={() => setIsUrgent(false)} className="flex-1 bg-white border border-rose-200 text-rose-700 p-6 rounded-2xl font-bold text-lg hover:bg-rose-100 transition-colors">
+                        {config.normalBtn}
+                      </button>
+                    </div>
+                  </div>
+               )}
+
+               {isUrgent === false && !triageResult && (
+                  <div className="glass-white p-8 rounded-[32px] border border-slate-200 shadow-sm">
+                    <h3 className="text-xl font-black text-slate-900 mb-2">{config.inputTitle}</h3>
+                    <p className="text-sm text-slate-500 font-medium mb-6">QueueSmart AI will analyze your request to determine queue priority and find the best center with low crowding.</p>
+                    <textarea 
+                      value={userDescription}
+                      onChange={e => setUserDescription(e.target.value)}
+                      placeholder={config.inputPlaceholder}
+                      className="w-full bg-white border border-slate-200 rounded-2xl p-6 min-h-[120px] outline-none focus:border-primary font-medium text-slate-700 mb-6 shadow-inner text-lg"
+                    />
+                    <button onClick={handleAnalyze} className="w-full m3-button m3-button-gold py-5 justify-center shadow-gold font-black text-lg">
+                      <Sparkles className="mr-2" size={20} /> Analyze & Find Centers
+                    </button>
+                  </div>
+               )}
+
+               {isUrgent === false && triageResult && (
+                  <div className="space-y-4">
+                    <div className={`p-6 rounded-[24px] border shadow-sm ${triageResult.priorityColor}`}>
+                      <h4 className="font-black text-lg mb-1 flex items-center gap-2"><Sparkles size={18} /> AI Triage Complete</h4>
+                      <p className="text-sm font-medium opacity-80 mb-3">Based on your input: "{triageResult.description}"</p>
+                      <div className="inline-block px-3 py-1 bg-white/50 backdrop-blur-sm rounded-lg font-black text-xs uppercase tracking-widest border border-white/20 shadow-sm">
+                        Calculated Priority: {triageResult.priority}
                       </div>
                     </div>
 
-                    <div className="flex gap-4">
-                      <button onClick={handleBookNormal} className="flex-1 m3-button m3-button-gold py-5 justify-center shadow-gold font-black text-lg">
-                        Book Token Now
-                      </button>
-                      <button className="px-6 py-5 bg-white border border-slate-200 rounded-2xl shadow-sm text-slate-600 hover:text-primary hover:border-primary transition-colors flex items-center justify-center">
-                        <Navigation size={24} />
-                      </button>
+                    <div className="glass-white p-6 rounded-[32px] border border-slate-200 shadow-sm">
+                      <h3 className="text-lg font-black text-slate-900 mb-4">Center Crowd Analysis</h3>
+                      <div className="space-y-4">
+                        {triageResult.hospitals.map((center, i) => (
+                          <div key={i} className={`p-5 rounded-2xl border flex flex-col md:flex-row justify-between items-start md:items-center gap-4 ${center.recommended ? 'bg-primary/5 border-primary/30 shadow-md relative overflow-hidden' : 'bg-white border-slate-100 shadow-sm'}`}>
+                            {center.recommended && <div className="absolute top-0 left-0 w-1 h-full bg-primary" />}
+                            <div>
+                               <div className="flex items-center gap-3 mb-1">
+                                 <h4 className="font-black text-slate-900 text-lg">{center.name}</h4>
+                                 {center.recommended && <span className="bg-primary text-white text-[9px] font-black uppercase px-2 py-0.5 rounded-md tracking-widest shadow-sm">Best Route</span>}
+                               </div>
+                               <p className="text-xs font-bold text-slate-500 uppercase tracking-widest">Est Wait: {center.wait}</p>
+                            </div>
+                            <div className="flex items-center gap-4 w-full md:w-auto">
+                               <div className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest border shadow-sm ${center.color}`}>
+                                 {center.crowd}
+                               </div>
+                               <button 
+                                 onClick={() => {
+                                   bookToken({ serviceType: config.normalType, centerId: center.name, priorityType: triageResult.priority.toLowerCase(), bookingSource: 'app', estimatedWait: 15 });
+                                   navigate('/live-status');
+                                 }}
+                                 className="ml-auto md:ml-0 px-6 py-3 bg-slate-900 text-white rounded-xl text-sm font-black shadow-md hover:scale-105 transition-transform"
+                               >
+                                 Book Route
+                               </button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
                     </div>
-                 </motion.div>
+                  </div>
                )}
             </motion.div>
           )}

@@ -1,8 +1,13 @@
 import React, { useState, memo } from 'react';
 import { motion } from 'framer-motion';
-import { Users, UserPlus, Phone, CreditCard, ChevronRight, CheckCircle, AlertCircle, Search } from 'lucide-react';
+import { Users, UserPlus, Phone, CreditCard, ChevronRight, CheckCircle, AlertCircle, Search, ShieldCheck, Monitor } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
 const StaffDashboard = memo(() => {
+  const navigate = useNavigate();
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [pin, setPin] = useState('');
+
   const [activeTab, setActiveTab] = useState('overview'); // overview, assist, counters
   const [search, setSearch] = useState('');
 
@@ -15,17 +20,103 @@ const StaffDashboard = memo(() => {
 
   const [assistForm, setAssistForm] = useState({ name: '', age: '', phone: '', service: 'Aadhaar Update' });
 
+  const [counters, setCounters] = useState([
+    { id: 1, status: 'serving', currentToken: 'Zoya Khan' },
+    { id: 2, status: 'idle', currentToken: null },
+    { id: 3, status: 'idle', currentToken: null },
+    { id: 4, status: 'idle', currentToken: null },
+  ]);
+
+  if (!isAuthenticated) {
+    return (
+      <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-6 font-outfit">
+        <div className="max-w-md w-full bg-white p-12 rounded-[40px] text-center space-y-8 shadow-2xl border border-slate-100">
+          <div className="w-24 h-24 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4">
+            <ShieldCheck size={48} className="text-primary" />
+          </div>
+          <div>
+            <h2 className="text-3xl font-black text-slate-900 tracking-tighter">Admin Access</h2>
+            <p className="text-slate-500 font-medium mt-2">Enter staff PIN to access dashboard (try 1234)</p>
+          </div>
+          <input 
+            type="password" 
+            placeholder="PIN" 
+            value={pin} 
+            onChange={e => setPin(e.target.value)} 
+            onKeyDown={(e) => { if(e.key === 'Enter') handleLogin(); }}
+            className="w-full bg-slate-50 border border-slate-200 text-slate-900 rounded-2xl py-4 px-6 text-center font-black tracking-[1em] text-2xl outline-none focus:border-primary" 
+          />
+          <button 
+            onClick={() => handleLogin()} 
+            className="w-full m3-button m3-button-gold py-5 text-xl font-black shadow-gold"
+          >
+            Access Panel
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  function handleLogin() {
+    if(pin === '1234') {
+      setIsAuthenticated(true);
+    } else {
+      alert('Incorrect PIN');
+    }
+  }
+
+  const toggleCounter = (id) => {
+    setCounters(prev => prev.map(c => {
+      if (c.id === id) {
+        if (c.status === 'idle') return { ...c, status: 'open' };
+        if (c.status === 'open' || c.status === 'serving') return { ...c, status: 'idle', currentToken: null };
+      }
+      return c;
+    }));
+  };
+
   const handleCallNext = () => {
-    // Simple simulation: first waiting token becomes serving
     const nextIdx = queue.findIndex(q => q.status === 'waiting');
     if (nextIdx !== -1) {
+      const nextToken = queue[nextIdx];
       const newQueue = [...queue];
-      // Mark current serving as done
       newQueue.forEach(q => { if (q.status === 'serving') q.status = 'done'; });
-      // Call next
       newQueue[nextIdx].status = 'serving';
       setQueue(newQueue);
+
+      setCounters(prev => {
+        let assigned = false;
+        return prev.map(c => {
+          if (!assigned && (c.status === 'open' || c.status === 'serving')) {
+            assigned = true;
+            return { ...c, status: 'serving', currentToken: nextToken.name };
+          }
+          return c;
+        });
+      });
+      alert(`Called ${nextToken.name} to the counter.`);
+    } else {
+      alert("No waiting tokens left in the queue!");
     }
+  };
+
+  const handleGenerateToken = () => {
+    if (!assistForm.name) return alert("Please enter citizen name");
+    
+    const newToken = {
+      id: Date.now().toString(),
+      name: assistForm.name,
+      age: assistForm.age || 30,
+      service: assistForm.service,
+      status: 'waiting',
+      priority: assistForm.age >= 60,
+      time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+    };
+    
+    setQueue([...queue, newToken]);
+    setAssistForm({ name: '', age: '', phone: '', service: 'Aadhaar Update' });
+    alert(`Assisted Token Generated successfully for ${assistForm.name}!`);
+    setActiveTab('overview');
   };
 
   return (
@@ -135,12 +226,24 @@ const StaffDashboard = memo(() => {
             {activeTab === 'assist' && (
               <div className="max-w-3xl glass-white p-10 rounded-[40px] border border-slate-200 space-y-8 shadow-xl">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                   <InputGroup label="Citizen Full Name" placeholder="e.g. Rahul Sharma" />
-                   <InputGroup label="Phone Number (Optional)" placeholder="+91 XXXXX XXXXX" icon={<Phone size={16} />} />
-                   <InputGroup label="Age" placeholder="e.g. 65" type="number" />
+                   <div className="space-y-2">
+                     <label className="text-[10px] uppercase font-black text-slate-400 tracking-widest ml-1">Citizen Full Name</label>
+                     <input type="text" placeholder="e.g. Rahul Sharma" value={assistForm.name} onChange={e => setAssistForm({...assistForm, name: e.target.value})} className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-4 text-sm font-bold text-slate-700 outline-none focus:border-primary transition-colors shadow-sm" />
+                   </div>
+                   
+                   <div className="space-y-2">
+                     <label className="text-[10px] uppercase font-black text-slate-400 tracking-widest ml-1">Phone Number</label>
+                     <input type="text" placeholder="+91 XXXXX XXXXX" value={assistForm.phone} onChange={e => setAssistForm({...assistForm, phone: e.target.value})} className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-4 text-sm font-bold text-slate-700 outline-none focus:border-primary transition-colors shadow-sm" />
+                   </div>
+                   
+                   <div className="space-y-2">
+                     <label className="text-[10px] uppercase font-black text-slate-400 tracking-widest ml-1">Age</label>
+                     <input type="number" placeholder="e.g. 65" value={assistForm.age} onChange={e => setAssistForm({...assistForm, age: e.target.value})} className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-4 text-sm font-bold text-slate-700 outline-none focus:border-primary transition-colors shadow-sm" />
+                   </div>
+                   
                    <div className="space-y-2">
                      <label className="text-[10px] uppercase font-black text-slate-400 tracking-widest ml-1">Service Type</label>
-                     <select className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-4 text-sm font-bold text-slate-700 outline-none focus:border-primary transition-colors appearance-none shadow-sm">
+                     <select value={assistForm.service} onChange={e => setAssistForm({...assistForm, service: e.target.value})} className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-4 text-sm font-bold text-slate-700 outline-none focus:border-primary transition-colors appearance-none shadow-sm">
                        <option>Aadhaar Update</option>
                        <option>New Account Opening</option>
                        <option>Pension Inquiry</option>
@@ -158,9 +261,34 @@ const StaffDashboard = memo(() => {
                    </p>
                 </div>
 
-                <button className="w-full m3-button m3-button-sky py-6 justify-center text-xl font-black shadow-blue">
+                <button 
+                  onClick={handleGenerateToken}
+                  className="w-full m3-button m3-button-sky py-6 justify-center text-xl font-black shadow-blue"
+                >
                   Generate Assisted Token
                 </button>
+              </div>
+            )}
+            
+            {activeTab === 'counters' && (
+              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
+                {counters.map(counter => (
+                  <div key={counter.id} className="bg-white p-8 rounded-[32px] border border-slate-200 flex flex-col items-center text-center shadow-lg transition-transform hover:scale-[1.02]">
+                    <div className={`w-20 h-20 rounded-full flex items-center justify-center mb-6 shadow-sm border ${counter.status !== 'idle' ? 'bg-primary/10 text-primary border-primary/20' : 'bg-slate-50 text-slate-400 border-slate-100'}`}>
+                       <Monitor size={32} />
+                    </div>
+                    <h3 className="text-3xl font-black text-slate-900 mb-2">Counter {counter.id}</h3>
+                    <p className="text-sm font-black uppercase tracking-widest mb-8 text-slate-400 h-4">
+                      {counter.status === 'serving' ? <span className="text-primary">Serving: {counter.currentToken}</span> : (counter.status === 'open' ? 'Waiting for citizen' : 'Idle')}
+                    </p>
+                    <button 
+                      onClick={() => toggleCounter(counter.id)}
+                      className={`w-full py-4 rounded-2xl font-black tracking-wide text-sm transition-colors border ${counter.status !== 'idle' ? 'bg-red-50 text-red-600 border-red-200 hover:bg-red-100 shadow-[0_4px_20px_rgba(239,68,68,0.1)]' : 'bg-green-50 text-green-600 border-green-200 hover:bg-green-100 shadow-[0_4px_20px_rgba(34,197,94,0.1)]'}`}
+                    >
+                      {counter.status !== 'idle' ? 'CLOSE COUNTER' : 'OPEN COUNTER'}
+                    </button>
+                  </div>
+                ))}
               </div>
             )}
           </div>
@@ -192,19 +320,5 @@ const StatusBadge = memo(({ status }) => {
     </span>
   );
 });
-
-const InputGroup = memo(({ label, placeholder, type = 'text', icon }) => (
-  <div className="space-y-2">
-    <label className="text-[10px] uppercase font-black text-slate-400 tracking-widest ml-1">{label}</label>
-    <div className="relative">
-      {icon && <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400">{icon}</div>}
-      <input 
-        type={type} 
-        placeholder={placeholder} 
-        className={`w-full bg-slate-50 border border-slate-200 rounded-2xl p-4 text-sm font-bold text-slate-700 outline-none focus:border-primary transition-colors shadow-sm ${icon ? 'pl-12' : ''}`}
-      />
-    </div>
-  </div>
-));
 
 export default StaffDashboard;

@@ -3,6 +3,8 @@ import { GoogleMap, useJsApiLoader, Marker } from '@react-google-maps/api';
 import { motion, AnimatePresence } from 'framer-motion';
 import { centers, getQueueColor } from '../utils/mockData';
 import { Clock, Navigation, Users, ArrowRight, X, MapPin, Search, Star, ShieldCheck } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
+import { useNavigate } from 'react-router-dom';
 
 const mapContainerStyle = {
   width: '100%',
@@ -21,6 +23,8 @@ const mapGoldStyles = [
 ];
 
 const FindCenters = () => {
+  const { user, bookToken } = useAuth();
+  const navigate = useNavigate();
   const [selectedCenter, setSelectedCenter] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
   
@@ -32,11 +36,42 @@ const FindCenters = () => {
   const filteredCenters = useMemo(() => {
     if (!searchQuery) return centers;
     const q = searchQuery.toLowerCase();
-    return centers.filter(c => 
+    const matches = centers.filter(c => 
+      c.name.toLowerCase().includes(q) || 
+      c.address.toLowerCase().includes(q)
+    );
+    
+    if (matches.length === 0) {
+      // Fallback: Return top 3 closest centers as "nearby"
+      return centers.slice(0, 3);
+    }
+    return matches;
+  }, [searchQuery]);
+
+  const hasExactMatch = useMemo(() => {
+    if (!searchQuery) return true;
+    const q = searchQuery.toLowerCase();
+    return centers.some(c => 
       c.name.toLowerCase().includes(q) || 
       c.address.toLowerCase().includes(q)
     );
   }, [searchQuery]);
+
+  const mapCenter = useMemo(() => {
+    if (selectedCenter) {
+      return { lat: selectedCenter.lat, lng: selectedCenter.lng };
+    }
+    if (searchQuery && filteredCenters.length > 0) {
+      return { lat: filteredCenters[0].lat, lng: filteredCenters[0].lng };
+    }
+    return defaultCenter;
+  }, [searchQuery, filteredCenters, selectedCenter]);
+
+  const mapZoom = useMemo(() => {
+    if (selectedCenter) return 16;
+    if (searchQuery && filteredCenters.length > 0) return 14;
+    return 12;
+  }, [searchQuery, filteredCenters, selectedCenter]);
 
   if (loadError) {
     return <div className="p-20 text-center text-red-500 bg-white min-h-screen">Error loading Maps.</div>;
@@ -45,8 +80,8 @@ const FindCenters = () => {
   return (
     <div className="relative w-full h-screen bg-white overflow-hidden font-outfit">
       {/* Search Header */}
-      <div className="absolute top-6 left-1/2 -translate-x-1/2 z-10 w-full max-w-xl px-6">
-        <div className="glass-white rounded-3xl px-6 py-4 border border-primary/20 flex items-center gap-4 shadow-xl">
+      <div className="absolute top-6 left-1/2 -translate-x-1/2 z-10 w-full max-w-xl px-6 flex flex-col items-center">
+        <div className="glass-white rounded-3xl px-6 py-4 border border-primary/20 flex items-center gap-4 shadow-xl w-full">
           <Search size={22} className="text-primary" />
           <input 
             type="text" 
@@ -56,14 +91,26 @@ const FindCenters = () => {
             className="bg-transparent border-none outline-none text-slate-800 w-full font-bold text-lg"
           />
         </div>
+        <AnimatePresence>
+          {!hasExactMatch && searchQuery && (
+            <motion.div 
+              initial={{ opacity: 0, y: -10 }} 
+              animate={{ opacity: 1, y: 0 }} 
+              exit={{ opacity: 0, y: -10 }}
+              className="mt-3 text-xs md:text-sm font-bold text-orange-600 bg-orange-50/90 backdrop-blur-md py-2 px-5 rounded-full border border-orange-200 shadow-sm"
+            >
+              Exact match not found. Showing nearest available centers.
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
 
       {isLoaded ? (
         <GoogleMap
           mapContainerStyle={mapContainerStyle}
-          center={defaultCenter}
-          zoom={12}
-          options={{ styles: mapGoldStyles, disableDefaultUI: true }}
+          center={mapCenter}
+          zoom={mapZoom}
+          options={{ styles: mapGoldStyles, disableDefaultUI: true, animation: window.google?.maps?.Animation?.DROP }}
         >
           {filteredCenters.map(item => (
             <Marker
@@ -121,7 +168,22 @@ const FindCenters = () => {
                   <InfoCard icon={<Navigation className="text-blue-500" />} label="Dist" value="1.2km" />
                 </div>
 
-                <button className="w-full m3-button m3-button-gold py-6 justify-center text-2xl shadow-gold font-black">
+                <button 
+                  onClick={() => {
+                    if (!user) {
+                      alert("Please login to join the queue.");
+                      navigate('/');
+                      return;
+                    }
+                    bookToken({
+                      center: selectedCenter.name,
+                      service: "General Checkup / Inquiry",
+                      date: new Date().toLocaleDateString()
+                    });
+                    navigate('/dashboard');
+                  }}
+                  className="w-full m3-button m3-button-gold py-6 justify-center text-2xl shadow-gold font-black"
+                >
                   Join Queue <ArrowRight size={32} />
                 </button>
               </div>

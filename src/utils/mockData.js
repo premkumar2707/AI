@@ -40,6 +40,16 @@ export const centers = [
     serviceType: 'Aadhaar, Voter ID, Certificates'
   },
   {
+    id: 'blr-kottige-1',
+    name: 'Kottigepalya Bangalore One',
+    address: 'Nagarbhavi Ring Road, Kottigepalya, Bengaluru, Karnataka 560091',
+    lat: 12.9791,
+    lng: 77.5137,
+    queueSize: 15,
+    hours: '08:00 AM - 07:00 PM',
+    serviceType: 'Aadhaar, Voter ID, Utility Bills'
+  },
+  {
     id: 'blr-rjn-1',
     name: 'Rajajinagar Mini Vidhana Soudha',
     address: '2nd Block, Rajajinagar, Bengaluru 560010',
@@ -48,6 +58,86 @@ export const centers = [
     queueSize: 56,
     hours: '10:00 AM - 05:00 PM',
     serviceType: 'Caste/Income Certificates, Land Records'
+  },
+  {
+    id: 'blr-ind-1',
+    name: 'Indiranagar Bangalore One',
+    address: 'Binnamangala, 1st Stage, Indiranagar, Bengaluru 560038',
+    lat: 12.9784,
+    lng: 77.6408,
+    queueSize: 34,
+    hours: '08:00 AM - 07:00 PM',
+    serviceType: 'Passports, Aadhaar, Bescom Bills'
+  },
+  {
+    id: 'blr-jay-1',
+    name: 'Jayanagar Bangalore One',
+    address: '4th Block, Jayanagar, Bengaluru 560011',
+    lat: 12.9299,
+    lng: 77.5826,
+    queueSize: 45,
+    hours: '08:00 AM - 08:00 PM',
+    serviceType: 'Utility Bills, Certificates'
+  },
+  {
+    id: 'blr-kor-1',
+    name: 'Koramangala Bangalore One',
+    address: 'BDA Complex, 3rd Block, Koramangala, Bengaluru 560034',
+    lat: 12.9279,
+    lng: 77.6271,
+    queueSize: 62,
+    hours: '08:00 AM - 07:00 PM',
+    serviceType: 'Passports, Trade License, Aadhaar'
+  },
+  {
+    id: 'blr-mall-1',
+    name: 'Malleshwaram Bangalore One',
+    address: '8th Cross, Malleshwaram, Bengaluru 560003',
+    lat: 13.0031,
+    lng: 77.5643,
+    queueSize: 21,
+    hours: '08:00 AM - 07:00 PM',
+    serviceType: 'Property Tax, Utility Bills'
+  },
+  {
+    id: 'blr-white-1',
+    name: 'Whitefield Bangalore One',
+    address: 'Whitefield Main Road, Bengaluru 560066',
+    lat: 12.9698,
+    lng: 77.7499,
+    queueSize: 92,
+    hours: '08:00 AM - 08:00 PM',
+    serviceType: 'Aadhaar, Utility Bills, Passports'
+  },
+  {
+    id: 'blr-hsr-1',
+    name: 'HSR Layout Bangalore One',
+    address: 'Sector 2, HSR Layout, Bengaluru 560102',
+    lat: 12.9081,
+    lng: 77.6476,
+    queueSize: 38,
+    hours: '08:00 AM - 07:00 PM',
+    serviceType: 'Aadhaar, Certificates, Bescom'
+  },
+  {
+    id: 'blr-tav-1',
+    name: 'Tavarekere Bangalore One',
+    address: 'Main Road, Tavarekere, Bengaluru 560029',
+    lat: 12.9185,
+    lng: 77.6033,
+    queueSize: 18,
+    hours: '08:00 AM - 08:00 PM',
+    serviceType: 'Aadhaar, Utility Bills, Passports'
+  },
+  {
+    id: 'blr-btm-1',
+    name: 'BTM Layout Bangalore One',
+    address: '2nd Stage, BTM Layout, Bengaluru 560076',
+    lat: 12.9165,
+    lng: 77.6101,
+    queueSize: 25,
+    hours: '08:00 AM - 07:00 PM',
+    serviceType: 'Trade License, Aadhaar, Bescom'
   }
 ];
 
